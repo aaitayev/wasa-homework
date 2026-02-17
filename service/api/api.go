@@ -82,6 +82,9 @@ func New(cfg Config) (Router, error) {
 		router:     router,
 		baseLogger: cfg.Logger,
 		db:         cfg.Database,
+		users:        make(map[string]string),
+		validTokens:  make(map[string]string),
+		conversations: make(map[string][]string),
 	}, nil
 }
 
@@ -93,4 +96,9 @@ type _router struct {
 	baseLogger logrus.FieldLogger
 
 	db database.AppDatabase
+
+	users map[string]string
+
+	validTokens  map[string]string
+	conversations map[string][]string
 }
