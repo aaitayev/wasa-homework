@@ -53,6 +53,8 @@ type Message struct {
 	Text           string    `json:"text"`
 	CreatedAt      time.Time `json:"createdAt"`
 	Deleted        bool      `json:"deleted,omitempty"`
+	Comment        string    `json:"comment,omitempty"`
+	CommentedAt    time.Time `json:"commentedAt,omitempty"`
 }
 
 // Conversation represents a conversation between users

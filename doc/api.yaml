@@ -405,13 +405,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [message]
+              required: [comment]
               properties:
-                message:
+                comment:
                   type: string
+                  minLength: 1
       responses:
-        "501":
-          description: Not implemented yet
+        "204":
+          description: Comment added
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Message deleted
         "500": { $ref: "#/components/responses/InternalServerError" }
     delete:
       operationId: uncommentMessage
@@ -424,8 +431,13 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented yet
+        "204":
+          description: Comment removed
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Message deleted
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /messages/{messageId}:
