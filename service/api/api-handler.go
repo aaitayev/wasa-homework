@@ -21,6 +21,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.DELETE("/messages/:messageId", rt.wrap(rt.deleteMessage))
 	rt.router.POST("/messages/:messageId/comment", rt.wrap(rt.commentMessage))
 	rt.router.DELETE("/messages/:messageId/comment", rt.wrap(rt.uncommentMessage))
+	rt.router.POST("/messages/:messageId/forward", rt.wrap(rt.forwardMessage))
 
 	return rt.router
 }

@@ -55,6 +55,7 @@ type Message struct {
 	Deleted        bool      `json:"deleted,omitempty"`
 	Comment        string    `json:"comment,omitempty"`
 	CommentedAt    time.Time `json:"commentedAt,omitempty"`
+	ForwardedFrom  string    `json:"forwardedFrom,omitempty"`
 }
 
 // Conversation represents a conversation between users
