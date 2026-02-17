@@ -103,7 +103,9 @@ func New(cfg Config) (Router, error) {
 		users:        make(map[string]string),
 		validTokens:  make(map[string]string),
 		conversations: make(map[string][]string),
+
 		conversationsData: make(map[string]Conversation),
+		messagesMap: make(map[string]string),
 	}, nil
 }
 
@@ -120,5 +122,7 @@ type _router struct {
 
 	validTokens  map[string]string
 	conversations map[string][]string
+
 	conversationsData map[string]Conversation
+	messagesMap map[string]string
 }

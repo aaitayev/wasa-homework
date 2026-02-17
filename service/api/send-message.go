@@ -105,6 +105,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	// 5. Update Conversation
 	conversation.Messages = append(conversation.Messages, msg)
 	rt.conversationsData[conversationID] = conversation
+	rt.messagesMap[msgID.String()] = conversationID
 
 	// 6. Response
 	w.WriteHeader(http.StatusCreated)
