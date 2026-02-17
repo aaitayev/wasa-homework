@@ -30,6 +30,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	var body struct {
 		ConversationID string `json:"conversationId"`
 		Text           string `json:"text"`
+		IsGroup        bool   `json:"isGroup"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -56,6 +57,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			ID:           conversationID,
 			Participants: []string{senderName},
 			Messages:     []Message{},
+			IsGroup:      body.IsGroup,
 		}
 		rt.conversationsData[conversationID] = conversation
 

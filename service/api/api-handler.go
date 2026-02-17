@@ -22,6 +22,9 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/messages/:messageId/comment", rt.wrap(rt.commentMessage))
 	rt.router.DELETE("/messages/:messageId/comment", rt.wrap(rt.uncommentMessage))
 	rt.router.POST("/messages/:messageId/forward", rt.wrap(rt.forwardMessage))
+	rt.router.POST("/groups/:groupId/members", rt.wrap(rt.addToGroup))
+	rt.router.POST("/groups/:groupId/leave", rt.wrap(rt.leaveGroup))
+	rt.router.PUT("/groups/:groupId/name", rt.wrap(rt.setGroupName))
 
 	return rt.router
 }

@@ -63,6 +63,8 @@ type Conversation struct {
 	ID           string   `json:"conversationId"`
 	Participants []string `json:"participants"`
 	Messages     []Message `json:"messages"`
+	IsGroup      bool      `json:"isGroup,omitempty"`
+	Name         string    `json:"name,omitempty"`
 }
 
 // Config is used to provide dependencies and configuration to the New function.
