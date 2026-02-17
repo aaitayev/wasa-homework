@@ -42,7 +42,25 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 )
+
+// Message represents a single message in a conversation
+type Message struct {
+	ID             string    `json:"id"`
+	ConversationID string    `json:"conversationId"`
+	SenderID       string    `json:"senderId"`
+	Text           string    `json:"text"`
+	CreatedAt      time.Time `json:"createdAt"`
+	Deleted        bool      `json:"deleted,omitempty"`
+}
+
+// Conversation represents a conversation between users
+type Conversation struct {
+	ID           string   `json:"conversationId"`
+	Participants []string `json:"participants"`
+	Messages     []Message `json:"messages"`
+}
 
 // Config is used to provide dependencies and configuration to the New function.
 type Config struct {
@@ -85,6 +103,7 @@ func New(cfg Config) (Router, error) {
 		users:        make(map[string]string),
 		validTokens:  make(map[string]string),
 		conversations: make(map[string][]string),
+		conversationsData: make(map[string]Conversation),
 	}, nil
 }
 
@@ -101,4 +120,5 @@ type _router struct {
 
 	validTokens  map[string]string
 	conversations map[string][]string
+	conversationsData map[string]Conversation
 }

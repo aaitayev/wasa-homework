@@ -16,6 +16,8 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.POST("/session", rt.wrap(rt.doLogin))
 	rt.router.GET("/conversations", rt.wrap(rt.getMyConversations))
 	rt.router.PUT("/me/name", rt.wrap(rt.setMyUserName))
+	rt.router.GET("/conversations/:conversationId", rt.wrap(rt.getConversation))
+	rt.router.POST("/messages", rt.wrap(rt.sendMessage))
 
 	return rt.router
 }

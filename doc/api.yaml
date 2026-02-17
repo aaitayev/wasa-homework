@@ -276,8 +276,35 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented yet
+        "200":
+          description: Conversation details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId:
+                    type: string
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        conversationId:
+                          type: string
+                        senderId:
+                          type: string
+                        text:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        deleted:
+                          type: boolean
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /messages:
@@ -291,15 +318,29 @@ paths:
           application/json:
             schema:
               type: object
-              required: [conversationId, message]
+              required: [text]
               properties:
                 conversationId:
                   type: string
-                message:
+                text:
                   type: string
+                  minLength: 1
       responses:
-        "501":
-          description: Not implemented yet
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [conversationId, messageId]
+                properties:
+                  conversationId:
+                    type: string
+                  messageId:
+                    type: string
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /messages/{messageId}/forward:
@@ -564,6 +605,10 @@ components:
       description: The request was not compliant with the documentation (eg. missing fields, etc)
     InternalServerError:
       description: The server encountered an internal error. Further info in server logs
+    Forbidden:
+      description: The user is not allowed to perform this action
+    NotFound:
+      description: The requested resource was not found
 
   securitySchemes:
     LegacyAuth:
