@@ -536,55 +536,7 @@ paths:
           description: Not implemented yet
         "500": { $ref: "#/components/responses/InternalServerError" }
 
-  /groups/{groupId}/members:
-    post:
-      operationId: addToGroup
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: groupId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [userId]
-              properties:
-                userId:
-                  type: string
-      responses:
-        "501":
-          description: Not implemented yet
-        "500": { $ref: "#/components/responses/InternalServerError" }
-    delete:
-      operationId: removeFromGroup
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: groupId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [userId]
-              properties:
-                userId:
-                  type: string
-      responses:
-        "501":
-          description: Not implemented yet
-        "500": { $ref: "#/components/responses/InternalServerError" }
+
 
   /groups/{groupId}/leave:
     post:
