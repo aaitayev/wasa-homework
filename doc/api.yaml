@@ -594,9 +594,18 @@ paths:
             schema:
               type: string
               format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
       responses:
-        "501":
-          description: Not implemented yet
+        "204":
+          description: Photo updated successfully
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413":
+          description: Payload Too Large
+        "415":
+          description: Unsupported Media Type
         "500": { $ref: "#/components/responses/InternalServerError" }
     delete:
       operationId: deleteMyPhoto
@@ -625,9 +634,19 @@ paths:
             schema:
               type: string
               format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
       responses:
-        "501":
-          description: Not implemented yet
+        "204":
+          description: Photo updated successfully
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413":
+          description: Payload Too Large
+        "415":
+          description: Unsupported Media Type
         "500": { $ref: "#/components/responses/InternalServerError" }
     delete:
       operationId: deleteGroupPhoto

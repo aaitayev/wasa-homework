@@ -111,6 +111,8 @@ func New(cfg Config) (Router, error) {
 
 		conversationsData: make(map[string]Conversation),
 		messagesMap: make(map[string]string),
+		userPhotos: make(map[string][]byte),
+		groupPhotos: make(map[string][]byte),
 	}, nil
 }
 
@@ -130,4 +132,6 @@ type _router struct {
 
 	conversationsData map[string]Conversation
 	messagesMap map[string]string
+	userPhotos map[string][]byte
+	groupPhotos map[string][]byte
 }
