@@ -2,7 +2,7 @@ import axios from "axios";
 
 // NOTE: Usually this is injected by Vite as __API_URL__, but for the homework:
 const instance = axios.create({
-	baseURL: "http://localhost:3000",
+	baseURL: __API_URL__,
 	timeout: 1000 * 5
 });
 

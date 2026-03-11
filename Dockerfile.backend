@@ -2,11 +2,7 @@ FROM golang:1.22 AS builder
 
 WORKDIR /src
 
-# Copy dependencies first to leverage caching
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy the rest of the source code
+# Copy dependency definitions and vendor directory
 COPY . .
 
 # Build the application
@@ -14,6 +10,9 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /out/webapi ./cmd/webapi
 
 FROM alpine:latest
+
+# Install sqlite and other dependencies for modernc.org/sqlite if needed
+RUN apk add --no-cache ca-certificates
 
 # Create data directory for SQLite persistence
 RUN mkdir -p /app/data && chmod 777 /app/data
@@ -25,6 +24,10 @@ COPY --from=builder /out/webapi /app/webapi
 
 # Expose the port
 EXPOSE 3000
+
+# Set environment variables for the application
+ENV CFG_DB_FILENAME=/app/data/wasa.db
+ENV CFG_WEB_APIHOST=0.0.0.0:3000
 
 # Set the command to run the application
 CMD ["/app/webapi"]

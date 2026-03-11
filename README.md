@@ -71,45 +71,50 @@ exit
 go build -tags webui ./cmd/webapi/
 ```
 
-## How to run (in development mode)
+## How to run (Development Mode)
 
-You can launch the backend only using:
+### Local Run
+1.  **Backend**:
+    ```shell
+    go run ./cmd/webapi/
+    ```
+2.  **Frontend**:
+    ```shell
+    cd webui
+    npm install
+    npm run dev
+    ```
+    The app will be available at `http://localhost:5173`.
 
+### Docker Compose (Recommended)
+This starts both the backend and frontend with a single command and persists data.
 ```shell
-go run ./cmd/webapi/
+docker compose up --build
+```
+-   **Frontend**: `http://localhost:5173`
+-   **Backend**: `http://localhost:3000`
+-   **Database**: Persisted in a Docker volume `wasa-data`.
+
+## How to reset the database
+
+### Local
+Remove the local database file:
+```shell
+rm data/wasa.db
 ```
 
-If you want to launch the WebUI, open a new tab and launch:
-
+### Docker
+Remove the Docker volume:
 ```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run dev
+docker compose down -v
 ```
 
-## How to build for production / homework delivery
+## Manual Verification Plan
+1.  **Start and Connect**: Run `docker compose up --build` and open `http://localhost:5173`.
+2.  **Basic Flow**: Log in, search for a user, create a conversation, and send a message.
+3.  **Photos**: Set a profile photo in `UsersView` and a group photo in `GroupsView`.
+4.  **Persistence**:
+    -   Restart containers: `docker compose restart`.
+    -   Refresh page and verify all data (messages, photos, names) is still there.
+5.  **Hard Reset**: Run `docker compose down -v` and verify the app starts fresh.
 
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-prod
-```
-
-For "Web and Software Architecture" students: before committing and pushing your work for grading, please read the section below named "My build works when I use `yarn run dev`, however there is a Javascript crash in production/grading"
-
-## Known issues
-
-### My build works when I use `yarn run dev`, however there is a Javascript crash in production/grading
-
-Some errors in the code are somehow not shown in `vite` development mode. To preview the code that will be used in production/grading settings, use the following commands:
-
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-prod
-yarn run preview
-```
-
-## License
-
-See [LICENSE](LICENSE).
