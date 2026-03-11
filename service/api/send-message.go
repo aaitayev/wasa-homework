@@ -33,10 +33,12 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	var body struct {
-		ConversationID string `json:"conversationId"`
-		Text           string `json:"text"`
-		IsGroup        bool   `json:"isGroup"`
-		Recipient      string `json:"recipient"`
+		ConversationID string   `json:"conversationId"`
+		Text           string   `json:"text"`
+		IsGroup        bool     `json:"isGroup"`
+		Recipient      string   `json:"recipient"`
+		Name           string   `json:"name"`
+		Participants   []string `json:"participants"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -61,7 +63,15 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		conversationID = uuidConf.String()
 		
 		participants := []string{senderName}
-		if body.Recipient != "" && !body.IsGroup && body.Recipient != senderName {
+		if body.IsGroup {
+			// Add all specified participants for a group
+			for _, p := range body.Participants {
+				trimmed := strings.TrimSpace(p)
+				if trimmed != "" && trimmed != senderName {
+					participants = append(participants, trimmed)
+				}
+			}
+		} else if body.Recipient != "" && body.Recipient != senderName {
 			participants = append(participants, body.Recipient)
 		}
 		
@@ -70,6 +80,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			Participants: participants,
 			Messages:     []models.Message{},
 			IsGroup:      body.IsGroup,
+			Name:         body.Name,
 		}
 		err = rt.db.CreateConversation(conversation)
 		if err != nil {

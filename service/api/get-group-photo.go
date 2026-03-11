@@ -59,7 +59,7 @@ func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	// 3. Get Photo from DB
-	photo, err := rt.db.GetGroupPhoto(groupID)
+	photo, contentType, err := rt.db.GetGroupPhoto(groupID)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("error getting group photo from db")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -71,7 +71,10 @@ func (rt *_router) getGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	// 4. Return Photo
-	w.Header().Set("Content-Type", "image/jpeg")
+	if contentType == "" {
+		contentType = "image/jpeg" // Fallback
+	}
+	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(photo)
 }

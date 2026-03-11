@@ -30,6 +30,7 @@ func (rt *_router) Handler() http.Handler {
 	rt.router.PUT("/me/photo", rt.wrap(rt.setMyPhoto))
 	rt.router.GET("/me/photo", rt.wrap(rt.getMyPhoto))
 	rt.router.GET("/users", rt.wrap(rt.searchUsers))
+	rt.router.GET("/users/:username/photo", rt.wrap(rt.getUserPhoto))
 
 	return rt.router
 }

@@ -81,7 +81,7 @@ func (rt *_router) setGroupPhoto(w http.ResponseWriter, r *http.Request, ps http
 	}
 
 	// 6. Store photo in DB
-	err = rt.db.SetGroupPhoto(groupID, photoBytes)
+	err = rt.db.SetGroupPhoto(groupID, photoBytes, contentType)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("error setting group photo in db")
 		w.WriteHeader(http.StatusInternalServerError)

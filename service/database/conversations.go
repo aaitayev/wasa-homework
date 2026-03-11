@@ -62,8 +62,10 @@ func (db *appdbimpl) UpdateConversationName(id string, name string) error {
 }
 
 func (db *appdbimpl) GetUserConversations(username string) ([]models.Conversation, error) {
+	// 1. Get IDs of conversations the user is in
 	rows, err := db.c.Query(`
-		SELECT c.id, c.is_group, c.name FROM conversations c
+		SELECT c.id, c.is_group, c.name 
+		FROM conversations c
 		JOIN participants p ON c.id = p.conversation_id
 		WHERE p.username = ?
 	`, username)
@@ -73,32 +75,46 @@ func (db *appdbimpl) GetUserConversations(username string) ([]models.Conversatio
 	defer rows.Close()
 
 	var conversations []models.Conversation
+	convMap := make(map[string]int) // Map ID to index in slice
+
 	for rows.Next() {
 		var c models.Conversation
 		if err := rows.Scan(&c.ID, &c.IsGroup, &c.Name); err != nil {
 			return nil, err
 		}
-
-		// participants will be loaded separately if needed by the handler, or we could load them here.
-		// For the sake of listing, maybe we don't need all participants for every conversation.
-		// But let's load them to be consistent with models.Conversation.
-		pRows, err := db.c.Query("SELECT username FROM participants WHERE conversation_id = ?", c.ID)
-		if err != nil {
-			return nil, err
-		}
-		for pRows.Next() {
-			var p string
-			if err := pRows.Scan(&p); err != nil {
-				pRows.Close()
-				return nil, err
-			}
-			c.Participants = append(c.Participants, p)
-		}
-		pRows.Close()
-
+		c.Participants = []string{}
+		convMap[c.ID] = len(conversations)
 		conversations = append(conversations, c)
 	}
-	return conversations, rows.Err()
+
+	if len(conversations) == 0 {
+		return conversations, nil
+	}
+
+	// 2. Fetch ALL participants for these conversations in one go
+	pRows, err := db.c.Query(`
+		SELECT p.conversation_id, p.username 
+		FROM participants p
+		WHERE p.conversation_id IN (
+			SELECT conversation_id FROM participants WHERE username = ?
+		)
+	`, username)
+	if err != nil {
+		return nil, err
+	}
+	defer pRows.Close()
+
+	for pRows.Next() {
+		var cid, p string
+		if err := pRows.Scan(&cid, &p); err != nil {
+			return nil, err
+		}
+		if idx, ok := convMap[cid]; ok {
+			conversations[idx].Participants = append(conversations[idx].Participants, p)
+		}
+	}
+
+	return conversations, pRows.Err()
 }
 
 func (db *appdbimpl) AddParticipant(conversationID string, username string) error {

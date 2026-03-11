@@ -343,6 +343,12 @@ paths:
                   minLength: 1
                 isGroup:
                   type: boolean
+                name:
+                  type: string
+                participants:
+                  type: array
+                  items:
+                    type: string
       responses:
         "201":
           description: Message sent
@@ -623,6 +629,30 @@ paths:
         "415":
           description: Unsupported Media Type
         "500": { $ref: "#/components/responses/InternalServerError" }
+    get:
+      operationId: getMyPhoto
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User photo found
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+    delete:
+      operationId: deleteMyPhoto
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Photo deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
 
   /users:
     get:
@@ -651,13 +681,27 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
-    delete:
-      operationId: deleteMyPhoto
+  /users/{username}/photo:
+    get:
+      operationId: getUserPhoto
       security:
         - bearerAuth: []
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema:
+            type: string
       responses:
-        "501":
-          description: Not implemented yet
+        "200":
+          description: User photo found
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /groups/{groupId}/photo:
@@ -692,8 +736,8 @@ paths:
         "415":
           description: Unsupported Media Type
         "500": { $ref: "#/components/responses/InternalServerError" }
-    delete:
-      operationId: deleteGroupPhoto
+    get:
+      operationId: getGroupPhoto
       security:
         - bearerAuth: []
       parameters:
@@ -703,8 +747,16 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented yet
+        "200":
+          description: Group photo found
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
 components:

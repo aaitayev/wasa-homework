@@ -50,7 +50,7 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 
 	// 4. Store photo in DB
-	err = rt.db.SetUserPhoto(username, photoBytes)
+	err = rt.db.SetUserPhoto(username, photoBytes, contentType)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("error setting user photo in db")
 		w.WriteHeader(http.StatusInternalServerError)

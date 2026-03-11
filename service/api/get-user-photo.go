@@ -8,8 +8,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// getMyPhoto handles GET /me/photo
-func (rt *_router) getMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+// getUserPhoto handles GET /users/:username/photo
+func (rt *_router) getUserPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// 1. Auth check
 	authHeader := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, "Bearer ") {
@@ -17,14 +17,16 @@ func (rt *_router) getMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, err := rt.db.GetUserByToken(token)
+	_, err := rt.db.GetUserByToken(token)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("error getting user by token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	username := ps.ByName("username")
 	if username == "" {
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

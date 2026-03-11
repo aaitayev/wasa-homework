@@ -65,10 +65,10 @@ type AppDatabase interface {
 	AddParticipant(conversationID string, username string) error
 
 	// Photo operations
-	SetUserPhoto(username string, photo []byte) error
-	GetUserPhoto(username string) ([]byte, error)
-	SetGroupPhoto(groupID string, photo []byte) error
-	GetGroupPhoto(groupID string) ([]byte, error)
+	SetUserPhoto(username string, photo []byte, contentType string) error
+	GetUserPhoto(username string) ([]byte, string, error)
+	SetGroupPhoto(groupID string, photo []byte, contentType string) error
+	GetGroupPhoto(groupID string) ([]byte, string, error)
 
 	Ping() error
 }
@@ -117,12 +117,14 @@ func New(db *sql.DB) (AppDatabase, error) {
 		`CREATE TABLE IF NOT EXISTS user_photos (
 			username TEXT PRIMARY KEY,
 			photo BLOB,
+			content_type TEXT NOT NULL DEFAULT 'image/jpeg',
 			FOREIGN KEY (username) REFERENCES users(name) ON DELETE CASCADE ON UPDATE CASCADE
 		);`,
 
 		`CREATE TABLE IF NOT EXISTS group_photos (
 			group_id TEXT PRIMARY KEY,
 			photo BLOB,
+			content_type TEXT NOT NULL DEFAULT 'image/jpeg',
 			FOREIGN KEY (group_id) REFERENCES conversations(id) ON DELETE CASCADE
 		);`,
 	}
@@ -133,6 +135,10 @@ func New(db *sql.DB) (AppDatabase, error) {
 			return nil, fmt.Errorf("error creating database structure: %w\nStatement: %s", err, stmt)
 		}
 	}
+
+	// Add content_type column if it doesn't exist (migration)
+	_, _ = db.Exec("ALTER TABLE user_photos ADD COLUMN content_type TEXT NOT NULL DEFAULT 'image/jpeg';")
+	_, _ = db.Exec("ALTER TABLE group_photos ADD COLUMN content_type TEXT NOT NULL DEFAULT 'image/jpeg';")
 
 	// Enable foreign keys
 	_, err := db.Exec("PRAGMA foreign_keys = ON;")
