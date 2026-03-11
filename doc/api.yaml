@@ -5,145 +5,51 @@ info:
   title: Fantastic Coffee (decaffeinated)
   description: Fantastic Coffee (decaffeinated), the skeleton project for Web and Software architecture course
   version: 1.0.0
-paths:
-  /status:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-    get:
-      tags: ["General"]
-      operationId: getStatusMessage
-      summary: Get status message for the user about issues / updates
-      description: |-
-        The response contains a status message meant for the user. It might
-        contains information about current technical issues, update messages
-        or general information.
-      responses:
-        "200":
-          description: Status message available
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StatusInfo"
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "500": { $ref: "#/components/responses/InternalServerError" }
-
   /:
     get:
-      tags: ["Group 1"]
+      tags: ["General"]
       operationId: index
       summary: Get an index
       description: |-
-        This is an example of an index API description
+        Returns "Hello World!" as plain text.
       responses:
         "200":
           description: Successful
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "500": { $ref: "#/components/responses/InternalServerError" }
-  /context:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-    post:
-      tags: ["Group 1"]
-      operationId: getContext
-      summary: Another API example
-      description: |-
-        Example description 2
-      responses:
-        "200":
-          description: Request ok
-          headers:
-            X-Access-Token:
-              description: Access token for authenticated requests
+          content:
+            text/plain:
               schema: { type: string }
         "500": { $ref: "#/components/responses/InternalServerError" }
-  /authenticated:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-    get:
-      tags: ["Group 2"]
-      operationId: getAuthenticatedExample
-      summary: Get an endpoint with authentication
-      description: |-
-        Get an endpoint with auth
-      security:
-        - LegacyAuth: []
-        - AppToken: []
-      responses:
-        "200":
-          description: Logout successful
-        "500": { $ref: "#/components/responses/InternalServerError" }
 
-  /pictures/{cat}:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-      - $ref: "#/components/parameters/cat"
+  /context:
     get:
-      tags: ["Cat pictures"]
-      operationId: getCatFromPicture
-      summary: Example of a parameter in URL
+      tags: ["General"]
+      operationId: getContextReply
+      summary: Example of context-aware endpoint
       description: |-
-        Example of a parameter in URL
-      security:
-        - LegacyAuth: []
+        Returns "Hello World!" as plain text using RequestContext.
       responses:
         "200":
-          description: Student picture found
+          description: Successful
           content:
-            image/png:
-              schema:
-                type: string
-                format: binary
-              example: Picture binary file
-        "404":
-          description: Student picture not found
+            text/plain:
+              schema: { type: string }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
-
-  /autofeeder/{cat}:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-      - $ref: "#/components/parameters/cat"
-    put:
-      tags: ["Autofeeder"]
-      operationId: createCatAutofeeder
-      summary: Example of PUT operation
-      security:
-        - LegacyAuth: []
+  /liveness:
+    get:
+      tags: ["General"]
+      operationId: liveness
+      summary: Liveness check
+      description: |-
+        Checks if the server is alive and serving requests.
       responses:
         "200":
-          description: Auto feed enabled
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "500": { $ref: "#/components/responses/InternalServerError" }
-    delete:
-      tags: ["Autofeeder"]
-      operationId: deleteCatAutofeeder
-      summary: Example of DELETE operation
-      security:
-        - LegacyAuth: []
-      responses:
-        "200":
-          description: Auto feed disabled
-        "400": { $ref: "#/components/responses/BadRequest" }
+          description: Server is alive
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /session:
     post:
-      tags: ["login"]
+      tags: ["Session"]
       operationId: doLogin
       summary: Logs in the user
       description: |-
@@ -160,8 +66,7 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 3
-                  maxLength: 16
+                  minLength: 1
       responses:
         "201":
           description: User log-in action successful
@@ -176,28 +81,6 @@ paths:
                     type: string
         "400": { $ref: "#/components/responses/BadRequest" }
         "500": { $ref: "#/components/responses/InternalServerError" }
-
-  /session/login:
-    parameters:
-      - $ref: "#/components/parameters/XAppBuild"
-      - $ref: "#/components/parameters/XAppVersion"
-      - $ref: "#/components/parameters/XAppLanguage"
-      - $ref: "#/components/parameters/XAppPlatform"
-    post:
-      tags: ["Session management"]
-      operationId: login
-      summary: Log-in into system
-      description: |-
-        Perform a log-in action using username and password credentials.
-        Returns a token which can be used in authenticated requests.
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                userid:
-                  type: string
                   pattern: '^[a-zA-Z0-9]+$'
                   minLength: 3
                   maxLength: 255
@@ -259,24 +142,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    isGroup:
-                      type: boolean
-                    name:
-                      type: string
-                    participants:
-                      type: array
-                      items:
-                        type: string
-                    lastMessageAt:
-                      type: string
-                      format: date-time
-                    lastMessageText:
-                      type: string
-        "400": { $ref: "#/components/responses/BadRequest" }
+                  $ref: "#/components/schemas/ConversationSummary"
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
@@ -297,28 +163,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  conversationId:
-                    type: string
-                  messages:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        conversationId:
-                          type: string
-                        senderId:
-                          type: string
-                        text:
-                          type: string
-                        createdAt:
-                          type: string
-                          format: date-time
-                        deleted:
-                          type: boolean
+                $ref: "#/components/schemas/Conversation"
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
@@ -486,8 +332,24 @@ paths:
                 conversationId:
                   type: string
       responses:
-        "501":
-          description: Not implemented yet
+        "201":
+          description: Message forwarded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [conversationId, messageId]
+                properties:
+                  conversationId:
+                    type: string
+                  messageId:
+                    type: string
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Source message deleted
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /messages/{messageId}/comment:
@@ -554,54 +416,11 @@ paths:
           schema:
             type: string
       responses:
-        "501":
-          description: Not implemented yet
-        "500": { $ref: "#/components/responses/InternalServerError" }
-
-
-
-  /groups/{groupId}/leave:
-    post:
-      operationId: leaveGroup
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: groupId
-          required: true
-          schema:
-            type: string
-      responses:
-        "501":
-          description: Not implemented yet
-        "500": { $ref: "#/components/responses/InternalServerError" }
-
-  /groups/{groupId}/name:
-    put:
-      operationId: setGroupName
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: groupId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                  minLength: 3
-                  maxLength: 16
-      responses:
-        "501":
-          description: Not implemented yet
+        "204":
+          description: Message deleted
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /me/photo:
@@ -761,20 +580,78 @@ paths:
 
 components:
   schemas:
-    StatusInfo:
-      title: Status Info
+    User:
       type: object
+      required: [name]
       properties:
-        status:
+        name:
           type: string
-          enum:
-            - info
-            - warning
-            - critical
-            - ""
-        title: { type: string }
-        message: { type: string }
-        url: { type: string }
+        identifier:
+          type: string
+
+    Message:
+      type: object
+      required: [id, conversationId, senderId, text, createdAt]
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        senderId:
+          type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deleted:
+          type: boolean
+        comment:
+          type: string
+        commentedAt:
+          type: string
+          format: date-time
+        forwardedFrom:
+          type: string
+
+    Conversation:
+      type: object
+      required: [conversationId, participants, messages]
+      properties:
+        conversationId:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        isGroup:
+          type: boolean
+        name:
+          type: string
+
+    ConversationSummary:
+      type: object
+      required: [id, isGroup, name, participants, lastMessageAt, lastMessageText]
+      properties:
+        id:
+          type: string
+        isGroup:
+          type: boolean
+        name:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+        lastMessageAt:
+          type: string
+          format: date-time
+        lastMessageText:
+          type: string
 
   responses:
     Unauthorized:
@@ -789,64 +666,6 @@ components:
       description: The requested resource was not found
 
   securitySchemes:
-    LegacyAuth:
-      type: apiKey
-      in: header
-      name: X-App-Token
-      description: |-
-        App session token value. This value is sent by the server in the login
-        and session refresh APIs.
     bearerAuth:
       type: http
       scheme: bearer
-
-  parameters:
-    XAppVersion:
-      schema:
-        type: string
-        pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
-        minLength: 1
-        maxLength: 10
-      name: X-App-Version
-      in: header
-      required: true
-      description: App human readable version ("semantic version" format)
-      allowEmptyValue: false
-    XAppBuild:
-      schema: { type: integer }
-      name: X-App-Build
-      in: header
-      required: true
-      description: App build number
-      allowEmptyValue: false
-    XAppLanguage:
-      schema:
-        type: string
-        pattern: '^[a-z]{2}([-_][A-Z]{2})?$'
-        minLength: 2
-        maxLength: 5
-      name: X-App-Language
-      in: header
-      required: true
-      description: App language in ISO 639-1 format
-      allowEmptyValue: false
-    XAppPlatform:
-      schema:
-        type: string
-        enum: [ios, android]
-      name: X-App-Platform
-      in: header
-      required: true
-      description: App operating system / platform
-      allowEmptyValue: false
-    cat:
-      schema:
-        type: string
-        pattern: '^[a-zA-Z]+$'
-        minLength: 3
-        maxLength: 10
-      name: cat
-      in: path
-      required: true
-      description: Cat
-      allowEmptyValue: false
