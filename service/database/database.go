@@ -34,12 +34,41 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/models"
+	"time"
 )
 
 // AppDatabase is the high level interface for the DB
 type AppDatabase interface {
-	GetName() (string, error)
-	SetName(name string) error
+	// User operations
+	CreateUser(name string, token string) error
+	GetUserByName(name string) (*models.User, error)
+	GetUserByToken(token string) (string, error)
+	UpdateUserName(oldName string, newName string) error
+	SearchUsers(query string) ([]string, error)
+
+	// Conversation operations
+	CreateConversation(conv *models.Conversation) error
+	GetConversation(id string) (*models.Conversation, error)
+	UpdateConversationName(id string, name string) error
+	GetUserConversations(username string) ([]models.Conversation, error)
+
+	// Message operations
+	SaveMessage(msg *models.Message) error
+	GetMessage(id string) (*models.Message, error)
+	RemoveParticipant(conversationID string, username string) error
+	DeleteMessage(id string) error
+	GetMessages(conversationID string) ([]models.Message, error)
+	UpdateMessageComment(id string, comment string, commentedAt time.Time) error
+
+	// Participant operations
+	AddParticipant(conversationID string, username string) error
+
+	// Photo operations
+	SetUserPhoto(username string, photo []byte) error
+	GetUserPhoto(username string) ([]byte, error)
+	SetGroupPhoto(groupID string, photo []byte) error
+	GetGroupPhoto(groupID string) ([]byte, error)
 
 	Ping() error
 }
@@ -55,15 +84,60 @@ func New(db *sql.DB) (AppDatabase, error) {
 		return nil, errors.New("database is required when building a AppDatabase")
 	}
 
-	// Check if table exists. If not, the database is empty, and we need to create the structure
-	var tableName string
-	err := db.QueryRow(`SELECT name FROM sqlite_master WHERE type='table' AND name='example_table';`).Scan(&tableName)
-	if errors.Is(err, sql.ErrNoRows) {
-		sqlStmt := `CREATE TABLE example_table (id INTEGER NOT NULL PRIMARY KEY, name TEXT);`
-		_, err = db.Exec(sqlStmt)
+	// Create tables if they don't exist
+	tables := []string{
+		`CREATE TABLE IF NOT EXISTS users (
+			name TEXT PRIMARY KEY,
+			token TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS conversations (
+			id TEXT PRIMARY KEY,
+			is_group BOOLEAN NOT NULL DEFAULT 0,
+			name TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS participants (
+			conversation_id TEXT NOT NULL,
+			username TEXT NOT NULL,
+			PRIMARY KEY (conversation_id, username),
+			FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+			FOREIGN KEY (username) REFERENCES users(name) ON DELETE CASCADE ON UPDATE CASCADE
+		);`,
+		`CREATE TABLE IF NOT EXISTS messages (
+			id TEXT PRIMARY KEY,
+			conversation_id TEXT NOT NULL,
+			sender TEXT NOT NULL,
+			text TEXT NOT NULL,
+			created_at DATETIME NOT NULL,
+			deleted BOOLEAN NOT NULL DEFAULT 0,
+			comment TEXT,
+			commented_at DATETIME,
+			forwarded_from TEXT,
+			FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+		);`,
+		`CREATE TABLE IF NOT EXISTS user_photos (
+			username TEXT PRIMARY KEY,
+			photo BLOB,
+			FOREIGN KEY (username) REFERENCES users(name) ON DELETE CASCADE ON UPDATE CASCADE
+		);`,
+
+		`CREATE TABLE IF NOT EXISTS group_photos (
+			group_id TEXT PRIMARY KEY,
+			photo BLOB,
+			FOREIGN KEY (group_id) REFERENCES conversations(id) ON DELETE CASCADE
+		);`,
+	}
+
+	for _, stmt := range tables {
+		_, err := db.Exec(stmt)
 		if err != nil {
-			return nil, fmt.Errorf("error creating database structure: %w", err)
+			return nil, fmt.Errorf("error creating database structure: %w\nStatement: %s", err, stmt)
 		}
+	}
+
+	// Enable foreign keys
+	_, err := db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		return nil, fmt.Errorf("error enabling foreign keys: %w", err)
 	}
 
 	return &appdbimpl{
@@ -74,3 +148,4 @@ func New(db *sql.DB) (AppDatabase, error) {
 func (db *appdbimpl) Ping() error {
 	return db.c.Ping()
 }
+

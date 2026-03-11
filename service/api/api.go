@@ -42,30 +42,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
-// Message represents a single message in a conversation
-type Message struct {
-	ID             string    `json:"id"`
-	ConversationID string    `json:"conversationId"`
-	SenderID       string    `json:"senderId"`
-	Text           string    `json:"text"`
-	CreatedAt      time.Time `json:"createdAt"`
-	Deleted        bool      `json:"deleted,omitempty"`
-	Comment        string    `json:"comment,omitempty"`
-	CommentedAt    time.Time `json:"commentedAt,omitempty"`
-	ForwardedFrom  string    `json:"forwardedFrom,omitempty"`
-}
-
-// Conversation represents a conversation between users
-type Conversation struct {
-	ID           string   `json:"conversationId"`
-	Participants []string `json:"participants"`
-	Messages     []Message `json:"messages"`
-	IsGroup      bool      `json:"isGroup,omitempty"`
-	Name         string    `json:"name,omitempty"`
-}
 
 // Config is used to provide dependencies and configuration to the New function.
 type Config struct {
@@ -105,14 +83,6 @@ func New(cfg Config) (Router, error) {
 		router:     router,
 		baseLogger: cfg.Logger,
 		db:         cfg.Database,
-		users:        make(map[string]string),
-		validTokens:  make(map[string]string),
-		conversations: make(map[string][]string),
-
-		conversationsData: make(map[string]Conversation),
-		messagesMap: make(map[string]string),
-		userPhotos: make(map[string][]byte),
-		groupPhotos: make(map[string][]byte),
 	}, nil
 }
 
@@ -124,14 +94,5 @@ type _router struct {
 	baseLogger logrus.FieldLogger
 
 	db database.AppDatabase
-
-	users map[string]string
-
-	validTokens  map[string]string
-	conversations map[string][]string
-
-	conversationsData map[string]Conversation
-	messagesMap map[string]string
-	userPhotos map[string][]byte
-	groupPhotos map[string][]byte
 }
+

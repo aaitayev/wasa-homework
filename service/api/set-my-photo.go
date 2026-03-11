@@ -9,10 +9,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // setMyPhoto handles the PUT /me/photo endpoint.
-// It requires a valid Bearer token.
-// It accepts an image/png or image/jpeg up to 5MB.
-// It stores the image in the user's record and returns 204 No Content.
 func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// Extract the token
 	authHeader := r.Header.Get("Authorization")
@@ -22,33 +20,43 @@ func (rt *_router) setMyPhoto(w http.ResponseWriter, r *http.Request, ps httprou
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
-	// Validate the token
-	username, valid := rt.validTokens[token]
-	if !valid {
+	// 1. Auth check
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// Validate Content-Type
+	// 2. Validate Content-Type
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "image/jpeg" && contentType != "image/png" {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	}
 
-	// Read body up to 5MB
+	// 3. Read body up to 5MB
 	const maxMemory = 5 * 1024 * 1024
 	r.Body = http.MaxBytesReader(w, r.Body, maxMemory)
-	
+
 	photoBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		// If MaxBytesReader hits the limit, it returns an error and we should respond with 413.
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
 	}
 
-	// Store photo
-	rt.userPhotos[username] = photoBytes
+	// 4. Store photo in DB
+	err = rt.db.SetUserPhoto(username, photoBytes)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error setting user photo in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
+

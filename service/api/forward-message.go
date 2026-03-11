@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/api/reqcontext"
+	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/models"
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 )
+
 
 // forwardMessage handles POST /messages/{messageId}/forward
 func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -20,8 +22,13 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -29,15 +36,26 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 	// 2. Validate Source Message
 	sourceMessageID := ps.ByName("messageId")
 
-	// Find source conversation
-	sourceConversationID, exists := rt.messagesMap[sourceMessageID]
-	if !exists {
+	// Get source message from DB
+	sourceMessage, err := rt.db.GetMessage(sourceMessageID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting source message from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if sourceMessage == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	sourceConversation, exists := rt.conversationsData[sourceConversationID]
-	if !exists {
+	// Get source conversation to check participation
+	sourceConversation, err := rt.db.GetConversation(sourceMessage.ConversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting source conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if sourceConversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -51,22 +69,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		}
 	}
 	if !isSourceParticipant {
-		w.WriteHeader(http.StatusNotFound) 
-		return
-	}
-
-	// Find source message details
-	var sourceMessage Message
-	found := false
-	for _, msg := range sourceConversation.Messages {
-		if msg.ID == sourceMessageID {
-			sourceMessage = msg
-			found = true
-			break
-		}
-	}
-	if !found {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -91,8 +94,13 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 
 	// 4. Validate Target Conversation
 	targetConversationID := body.ConversationID
-	targetConversation, exists := rt.conversationsData[targetConversationID]
-	if !exists {
+	targetConversation, err := rt.db.GetConversation(targetConversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting target conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if targetConversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -106,7 +114,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		}
 	}
 	if !isTargetParticipant {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -117,7 +125,7 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	newMessage := Message{
+	newMessage := models.Message{
 		ID:             newMessageID.String(),
 		ConversationID: targetConversationID,
 		SenderID:       username, // The forwarder is the new sender
@@ -126,10 +134,13 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		ForwardedFrom:  sourceMessageID,
 	}
 
-	// 6. Update Target Conversation and Maps
-	targetConversation.Messages = append(targetConversation.Messages, newMessage)
-	rt.conversationsData[targetConversationID] = targetConversation
-	rt.messagesMap[newMessageID.String()] = targetConversationID
+	// 6. Save in DB
+	err = rt.db.SaveMessage(&newMessage)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error saving forwarded message in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// 7. Response
 	w.WriteHeader(http.StatusCreated)
@@ -142,3 +153,4 @@ func (rt *_router) forwardMessage(w http.ResponseWriter, r *http.Request, ps htt
 		MessageID:      newMessageID.String(),
 	})
 }
+

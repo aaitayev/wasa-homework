@@ -259,7 +259,23 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    isGroup:
+                      type: boolean
+                    name:
+                      type: string
+                    participants:
+                      type: array
+                      items:
+                        type: string
+                    lastMessageAt:
+                      type: string
+                      format: date-time
+                    lastMessageText:
+                      type: string
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalServerError" }
@@ -607,6 +623,34 @@ paths:
         "415":
           description: Unsupported Media Type
         "500": { $ref: "#/components/responses/InternalServerError" }
+
+  /users:
+    get:
+      operationId: searchUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: List of users matching search criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+
     delete:
       operationId: deleteMyPhoto
       security:

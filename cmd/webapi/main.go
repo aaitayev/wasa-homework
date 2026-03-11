@@ -32,7 +32,7 @@ import (
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/database"
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/globaltime"
 	"github.com/ardanlabs/conf"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
@@ -80,9 +80,17 @@ func run() error {
 
 	logger.Infof("application initializing")
 
+	// Ensure database directory exists
+	dbDir := "./data"
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		logger.WithError(err).Error("error creating database directory")
+		return fmt.Errorf("creating database directory: %w", err)
+	}
+
 	// Start Database
 	logger.Println("initializing database support")
-	dbconn, err := sql.Open("sqlite3", cfg.DB.Filename)
+	dbPath := dbDir + "/wasa.db"
+	dbconn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		logger.WithError(err).Error("error opening SQLite DB")
 		return fmt.Errorf("opening SQLite: %w", err)

@@ -15,6 +15,9 @@ RUN CGO_ENABLED=0 go build -o /out/webapi ./cmd/webapi
 
 FROM alpine:latest
 
+# Create data directory for SQLite persistence
+RUN mkdir -p /app/data && chmod 777 /app/data
+
 WORKDIR /app
 
 # Copy the binary from the builder stage
@@ -25,3 +28,4 @@ EXPOSE 3000
 
 # Set the command to run the application
 CMD ["/app/webapi"]
+

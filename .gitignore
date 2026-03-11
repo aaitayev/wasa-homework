@@ -14,16 +14,12 @@ docker-compose.log
 
 .vscode/*
 !.vscode/extensions.json
+
+# Temporary data files
 body.json
 name.json
-body.json
-msg.json
-body.json
-msg.json
-body.json
 msg.json
 comment.json
-body.json
 msgA.json
 msgB.json
 fwd.json
@@ -34,3 +30,14 @@ gname.json
 add.json
 test.jpg
 webapi
+data/
+
+# Frontend artifacts
+webui/node_modules/
+webui/.pnp.*
+webui/.yarn/cache/
+webui/.yarn/unplugged/
+webui/.yarn/install-state.gz
+webui/.yarn/build-state.yml
+webui/package-lock.json
+webui/dist/

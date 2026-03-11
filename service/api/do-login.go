@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // doLogin handles the POST /session endpoint.
 // It reads a JSON body {"name": "..."}.
 // If the name is missing or empty, it returns 400.
@@ -31,8 +32,15 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 	}
 
 	// Check if the user exists
-	identifier, exists := rt.users[user.Name]
-	if !exists {
+	dbUser, err := rt.db.GetUserByName(user.Name)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var identifier string
+	if dbUser == nil {
 		// Create a new user
 		ident, err := uuid.NewV4()
 		if err != nil {
@@ -41,11 +49,16 @@ func (rt *_router) doLogin(w http.ResponseWriter, r *http.Request, ps httprouter
 			return
 		}
 		identifier = ident.String()
-		rt.users[user.Name] = identifier
-		rt.validTokens[identifier] = user.Name
+		err = rt.db.CreateUser(user.Name, identifier)
+		if err != nil {
+			ctx.Logger.WithError(err).Error("error creating user in db")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	} else {
-		rt.validTokens[identifier] = user.Name
+		identifier = dbUser.Token
 	}
+
 
 	// Return the identifier
 	w.Header().Set("Content-Type", "application/json")

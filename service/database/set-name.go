@@ -1,7 +1,4 @@
 package database
 
-// SetName is an example that shows you how to execute insert/update
-func (db *appdbimpl) SetName(name string) error {
-	_, err := db.c.Exec("INSERT INTO example_table (id, name) VALUES (1, ?)", name)
-	return err
-}
+// This file is no longer used and its contents have been migrated to the persistence layer.
+// Keeping it to avoid breaking changes if referenced by name in other tools, but emptied.

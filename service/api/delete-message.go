@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // deleteMessage handles DELETE /messages/{messageId}
 func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// 1. Auth check
@@ -17,8 +18,13 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -26,21 +32,31 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 	// 2. Get Message ID
 	messageID := ps.ByName("messageId")
 
-	// 3. Find Conversation
-	conversationID, exists := rt.messagesMap[messageID]
-	if !exists {
+	// 3. Get message from DB
+	msg, err := rt.db.GetMessage(messageID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting message from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if msg == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	conversation, exists := rt.conversationsData[conversationID]
-	if !exists {
-		// Should not happen if messagesMap is consistent, but safety first
+	// 4. Get Conversation to check participation
+	conversation, err := rt.db.GetConversation(msg.ConversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if conversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	// 4. Check Participant
+	// 5. Check Participation
 	isParticipant := false
 	for _, p := range conversation.Participants {
 		if p == username {
@@ -49,29 +65,26 @@ func (rt *_router) deleteMessage(w http.ResponseWriter, r *http.Request, ps http
 		}
 	}
 	if !isParticipant {
-		w.WriteHeader(http.StatusForbidden) // or 404 per requirements
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	// 5. Delete (Mark as Deleted)
-	found := false
-	for i, msg := range conversation.Messages {
-		if msg.ID == messageID {
-			conversation.Messages[i].Deleted = true
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		// This might happen if we had map entry but message was already hard-deleted or logic mismatch
-		w.WriteHeader(http.StatusNotFound)
+	// 6. Delete (Mark as Deleted)
+	// Spec often implies only sender can delete, but let's stick to participant check + sender check if needed.
+	// Most implementations allow sender to delete their own message.
+	if msg.SenderID != username {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	// Save back
-	rt.conversationsData[conversationID] = conversation
+	err = rt.db.DeleteMessage(messageID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error deleting message in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// 6. Response
+	// 7. Response
 	w.WriteHeader(http.StatusNoContent)
 }
+

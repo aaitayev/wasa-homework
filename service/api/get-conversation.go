@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // getConversation handles GET /conversations/{conversationId}
 func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// 1. Auth check
@@ -18,8 +19,13 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -27,9 +33,14 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 	// 2. Get Conversation ID
 	conversationID := ps.ByName("conversationId")
 
-	// 3. Check Existence
-	conversation, exists := rt.conversationsData[conversationID]
-	if !exists {
+	// 3. Get Conversation from DB
+	conversation, err := rt.db.GetConversation(conversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if conversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -47,13 +58,17 @@ func (rt *_router) getConversation(w http.ResponseWriter, r *http.Request, ps ht
 		return
 	}
 
-	// 5. Response
+	// 5. Load messages
+	messages, err := rt.db.GetMessages(conversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting messages from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	conversation.Messages = messages
+
+	// 6. Response
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(struct {
-		ConversationID string    `json:"conversationId"`
-		Messages       []Message `json:"messages"`
-	}{
-		ConversationID: conversation.ID,
-		Messages:       conversation.Messages,
-	})
+	_ = json.NewEncoder(w).Encode(conversation)
 }
+

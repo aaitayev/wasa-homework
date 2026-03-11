@@ -9,6 +9,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // addToGroup handles POST /groups/{groupId}/members
 func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// 1. Auth check
@@ -18,21 +19,27 @@ func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// 2. Get Group ID
 	groupID := ps.ByName("groupId")
-	conversation, exists := rt.conversationsData[groupID]
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
+	conversation, err := rt.db.GetConversation(groupID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if !conversation.IsGroup {
-		w.WriteHeader(http.StatusNotFound) 
+	if conversation == nil || !conversation.IsGroup {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -45,7 +52,7 @@ func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		}
 	}
 	if !isParticipant {
-		w.WriteHeader(http.StatusForbidden) // 403 or 404
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -62,30 +69,24 @@ func (rt *_router) addToGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// 5. Check if user exists (simplification: check internal map)
-	// We only track "users" map which maps username -> token.
-	// If the requirement says "memberId" is the username, we check if it exists in "users".
-	// But "users" map is keyed by username.
-	if _, userExists := rt.users[body.MemberID]; !userExists {
+	// 5. Check if member-to-be-added exists
+	existingUser, err := rt.db.GetUserByName(body.MemberID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error checking user existence in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if existingUser == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	// 6. Add Member
-	// Check if already in group
-	alreadyIn := false
-	for _, p := range conversation.Participants {
-		if p == body.MemberID {
-			alreadyIn = true
-			break
-		}
-	}
-
-	if !alreadyIn {
-		conversation.Participants = append(conversation.Participants, body.MemberID)
-		rt.conversationsData[groupID] = conversation
-		// Update reverse index
-		rt.conversations[body.MemberID] = append(rt.conversations[body.MemberID], groupID)
+	err = rt.db.AddParticipant(groupID, body.MemberID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error adding participant to group in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -100,34 +101,35 @@ func (rt *_router) leaveGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// 2. Get Group ID
 	groupID := ps.ByName("groupId")
-	conversation, exists := rt.conversationsData[groupID]
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
+	conversation, err := rt.db.GetConversation(groupID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// Spec doesn't strictly say it must be IsGroup=true, but implies it.
-	// "If group not found or not isGroup => 404" was for addToGroup.
-	// For leaveGroup, usually applies too, or generally for any conversation.
-	if !conversation.IsGroup {
+	if conversation == nil || !conversation.IsGroup {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	// 3. Check/Remove Participant
 	isParticipant := false
-	participantIndex := -1
-	for i, p := range conversation.Participants {
+	for _, p := range conversation.Participants {
 		if p == username {
 			isParticipant = true
-			participantIndex = i
 			break
 		}
 	}
@@ -136,17 +138,12 @@ func (rt *_router) leaveGroup(w http.ResponseWriter, r *http.Request, ps httprou
 		return
 	}
 
-	// Remove from Participants
-	conversation.Participants = append(conversation.Participants[:participantIndex], conversation.Participants[participantIndex+1:]...)
-	rt.conversationsData[groupID] = conversation
-
-	// Remove from reverse index
-	userConvs := rt.conversations[username]
-	for i, cID := range userConvs {
-		if cID == groupID {
-			rt.conversations[username] = append(userConvs[:i], userConvs[i+1:]...)
-			break
-		}
+	// Remove Participant
+	err = rt.db.RemoveParticipant(groupID, username)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error removing participant from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -161,20 +158,26 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// 2. Get Group ID
 	groupID := ps.ByName("groupId")
-	conversation, exists := rt.conversationsData[groupID]
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
+	conversation, err := rt.db.GetConversation(groupID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if !conversation.IsGroup {
+	if conversation == nil || !conversation.IsGroup {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -188,7 +191,7 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 		}
 	}
 	if !isParticipant {
-		w.WriteHeader(http.StatusNotFound) // or 403
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -206,8 +209,13 @@ func (rt *_router) setGroupName(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 
 	// 5. Update Name
-	conversation.Name = body.Name
-	rt.conversationsData[groupID] = conversation
+	err = rt.db.UpdateConversationName(groupID, body.Name)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error updating conversation name in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
+

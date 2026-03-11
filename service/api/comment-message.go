@@ -10,6 +10,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+
 // commentMessage handles POST /messages/{messageId}/comment
 func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 	// 1. Auth check
@@ -19,8 +20,13 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -28,20 +34,31 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 	// 2. Get Message ID
 	messageID := ps.ByName("messageId")
 
-	// 3. Find Conversation
-	conversationID, exists := rt.messagesMap[messageID]
-	if !exists {
+	// 3. Get Message from DB
+	msg, err := rt.db.GetMessage(messageID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting message from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if msg == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	conversation, exists := rt.conversationsData[conversationID]
-	if !exists {
+	// 4. Get Conversation to check participation
+	conversation, err := rt.db.GetConversation(msg.ConversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if conversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	// 4. Check Participant
+	// 5. Check Participant
 	isParticipant := false
 	for _, p := range conversation.Participants {
 		if p == username {
@@ -50,24 +67,11 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		}
 	}
 	if !isParticipant {
-		w.WriteHeader(http.StatusNotFound) // or 403
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	// 5. Find Message
-	msgIndex := -1
-	for i, msg := range conversation.Messages {
-		if msg.ID == messageID {
-			msgIndex = i
-			break
-		}
-	}
-	if msgIndex == -1 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if conversation.Messages[msgIndex].Deleted {
+	if msg.Deleted {
 		w.WriteHeader(http.StatusConflict) // 409 Conflict for soft-deleted message
 		return
 	}
@@ -85,10 +89,13 @@ func (rt *_router) commentMessage(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	// 7. Update Message
-	conversation.Messages[msgIndex].Comment = body.Comment
-	conversation.Messages[msgIndex].CommentedAt = time.Now()
-	rt.conversationsData[conversationID] = conversation
+	// 7. Update Message Comment in DB
+	err = rt.db.UpdateMessageComment(messageID, body.Comment, time.Now())
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error updating message comment in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -102,8 +109,13 @@ func (rt *_router) uncommentMessage(w http.ResponseWriter, r *http.Request, ps h
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	username, valid := rt.validTokens[token]
-	if !valid {
+	username, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if username == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -111,20 +123,31 @@ func (rt *_router) uncommentMessage(w http.ResponseWriter, r *http.Request, ps h
 	// 2. Get Message ID
 	messageID := ps.ByName("messageId")
 
-	// 3. Find Conversation
-	conversationID, exists := rt.messagesMap[messageID]
-	if !exists {
+	// 3. Get Message from DB
+	msg, err := rt.db.GetMessage(messageID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting message from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if msg == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	conversation, exists := rt.conversationsData[conversationID]
-	if !exists {
+	// 4. Get Conversation to check participation
+	conversation, err := rt.db.GetConversation(msg.ConversationID)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting conversation from db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if conversation == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	// 4. Check Participant
+	// 5. Check Participant
 	isParticipant := false
 	for _, p := range conversation.Participants {
 		if p == username {
@@ -133,32 +156,23 @@ func (rt *_router) uncommentMessage(w http.ResponseWriter, r *http.Request, ps h
 		}
 	}
 	if !isParticipant {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	// 5. Find Message
-	msgIndex := -1
-	for i, msg := range conversation.Messages {
-		if msg.ID == messageID {
-			msgIndex = i
-			break
-		}
-	}
-	if msgIndex == -1 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if conversation.Messages[msgIndex].Deleted {
+	if msg.Deleted {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
 
-	// 6. Remove Comment
-	conversation.Messages[msgIndex].Comment = ""
-	conversation.Messages[msgIndex].CommentedAt = time.Time{}
-	rt.conversationsData[conversationID] = conversation
+	// 6. Remove Comment in DB
+	err = rt.db.UpdateMessageComment(messageID, "", time.Time{})
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error removing message comment in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
+

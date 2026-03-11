@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/api/reqcontext"
+	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/models"
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 )
@@ -20,17 +21,22 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		return
 	}
 	token := strings.TrimPrefix(authHeader, "Bearer ")
-	senderName, valid := rt.validTokens[token]
-	if !valid {
+	senderName, err := rt.db.GetUserByToken(token)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error getting user by token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if senderName == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// 2. Parse body
 	var body struct {
 		ConversationID string `json:"conversationId"`
 		Text           string `json:"text"`
 		IsGroup        bool   `json:"isGroup"`
+		Recipient      string `json:"recipient"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -42,7 +48,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	var conversationID string
-	var conversation Conversation
+	var conversation *models.Conversation
 
 	// 3. Handle Conversation Logic
 	if body.ConversationID == "" {
@@ -53,23 +59,35 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			return
 		}
 		conversationID = uuidConf.String()
-		conversation = Conversation{
+		
+		participants := []string{senderName}
+		if body.Recipient != "" && !body.IsGroup && body.Recipient != senderName {
+			participants = append(participants, body.Recipient)
+		}
+		
+		conversation = &models.Conversation{
 			ID:           conversationID,
-			Participants: []string{senderName},
-			Messages:     []Message{},
+			Participants: participants,
+			Messages:     []models.Message{},
 			IsGroup:      body.IsGroup,
 		}
-		rt.conversationsData[conversationID] = conversation
-
-		// Link to user
-		rt.conversations[senderName] = append(rt.conversations[senderName], conversationID)
+		err = rt.db.CreateConversation(conversation)
+		if err != nil {
+			ctx.Logger.WithError(err).Error("error creating conversation in db")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 	} else {
 		// Existing conversation
 		conversationID = body.ConversationID
-		var exists bool
-		conversation, exists = rt.conversationsData[conversationID]
-		if !exists {
+		conversation, err = rt.db.GetConversation(conversationID)
+		if err != nil {
+			ctx.Logger.WithError(err).Error("error getting conversation from db")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if conversation == nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -83,8 +101,6 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 			}
 		}
 		if !isParticipant {
-			// Spec says 404 or 403. Let's use 403 Forbidden as it's more accurate for "owned by user" check failure
-			// but user asked for 404/403. Let's stick to 403.
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -96,7 +112,7 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	msg := Message{
+	msg := models.Message{
 		ID:             msgID.String(),
 		ConversationID: conversationID,
 		SenderID:       senderName,
@@ -105,9 +121,12 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 	}
 
 	// 5. Update Conversation
-	conversation.Messages = append(conversation.Messages, msg)
-	rt.conversationsData[conversationID] = conversation
-	rt.messagesMap[msgID.String()] = conversationID
+	err = rt.db.SaveMessage(&msg)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("error saving message in db")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// 6. Response
 	w.WriteHeader(http.StatusCreated)
@@ -120,3 +139,4 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		MessageID:      msgID.String(),
 	})
 }
+
