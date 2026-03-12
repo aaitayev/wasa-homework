@@ -1,134 +1,101 @@
-# Fantastic coffee (decaffeinated)
+# WASAText Messenger
 
-This repository contains the basic structure for [Web and Software Architecture](http://gamificationlab.uniroma1.it/en/wasa/) homework project.
-It has been described in class.
+WASAText Messenger is a lightweight, web-based social messaging platform designed for the **Web and Software Architecture (WASA)** course. It features a robust Go backend, a reactive Vue 3/Vite frontend, and reliable SQLite persistence using a pure-Go driver.
 
-"Fantastic coffee (decaffeinated)" is a simplified version for the WASA course, not suitable for a production environment.
-The full version can be found in the "Fantastic Coffee" repository.
+## Features
+- **Direct & Group Messaging**: Seamless one-on-one and multi-user conversations.
+- **Message Lifecycle**: Send, receive, and **soft-delete** messages.
+- **Interactions**: Add or remove comments on any message.
+- **Forwarding**: Easily forward messages across different conversations.
+- **User Discovery**: Search for users to start new DMs.
+- **Managed Profiles**: Upload and display profile and group photos (PNG/JPEG).
+- **SQLite Persistence**: Data survives restarts via `modernc.org/sqlite`.
+- **Docker Compose Orchestration**: Start the entire stack with a single command.
 
-## Project structure
+## Technologies Used
 
-* `cmd/` contains all executables; Go programs here should only do "executable-stuff", like reading options from the CLI/env, etc.
-	* `cmd/healthcheck` is an example of a daemon for checking the health of servers daemons; useful when the hypervisor is not providing HTTP readiness/liveness probes (e.g., Docker engine)
-	* `cmd/webapi` contains an example of a web API server daemon
-* `demo/` contains a demo config file
-* `doc/` contains the documentation (usually, for APIs, this means an OpenAPI file)
-* `service/` has all packages for implementing project-specific functionalities
-	* `service/api` contains an example of an API server
-	* `service/globaltime` contains a wrapper package for `time.Time` (useful in unit testing)
-* `vendor/` is managed by Go, and contains a copy of all dependencies
-* `webui/` is an example of a web frontend in Vue.js; it includes:
-	* Bootstrap JavaScript framework
-	* a customized version of "Bootstrap dashboard" template
-	* feather icons as SVG
-	* Go code for release embedding
+### Backend
+- **Go 1.24**: Fast, statically-typed compiled language.
+- **httprouter**: High-performance request multiplexer.
+- **Logrus**: Structured logger for Go.
+- **Gorilla Handlers**: Standard middleware for logging and recovery.
+- **UUID**: Unique identifier generation for messages and conversations.
+- **modernc.org/sqlite**: Pure-Go SQLite implementation (no CGO required).
+- **ardanlabs/conf**: Support for configuration via environment variables and flags.
 
-Other project files include:
-* `open-node.sh` starts a new (temporary) container using `node:20` image for safe and secure web frontend development (you don't want to use `node` in your system, do you?).
+### Frontend
+- **Vue.js 3**: Progressive JavaScript framework.
+- **Vite**: Next-generation frontend tooling.
+- **Vue Router**: Official router for Vue.js.
+- **Axios**: Promised-based HTTP client for the browser.
+- **Bootstrap**: Modern styling and responsive components.
 
-## Go vendoring
+## Setup & Running the Application on your local machine
 
-This project uses [Go Vendoring](https://go.dev/ref/mod#vendoring). You must use `go mod vendor` after changing some dependency (`go get` or `go mod tidy`) and add all files under `vendor/` directory in your commit.
+### Backend
+**Prerequisites**: [Go 1.24+](https://go.dev/dl/)
 
-For more information about vendoring:
-
-* https://go.dev/ref/mod#vendoring
-* https://www.ardanlabs.com/blog/2020/04/modules-06-vendoring.html
-
-## Node/YARN vendoring
-
-This repository uses `yarn` and a vendoring technique that exploits the ["Offline mirror"](https://yarnpkg.com/features/caching). As for the Go vendoring, the dependencies are inside the repository.
-
-You should commit the files inside the `.yarn` directory.
-
-## How to set up a new project from this template
-
-You need to:
-
-* Change the Go module path to your module path in `go.mod`, `go.sum`, and in `*.go` files around the project
-* Rewrite the API documentation `doc/api.yaml`
-* If no web frontend is expected, remove `webui` and `cmd/webapi/register-webui.go`
-* Update top/package comment inside `cmd/webapi/main.go` to reflect the actual project usage, goal, and general info
-* Update the code in `run()` function (`cmd/webapi/main.go`) to connect to databases or external resources
-* Write API code inside `service/api`, and create any further package inside `service/` (or subdirectories)
-
-## How to build
-
-If you're not using the WebUI, or if you don't want to embed the WebUI into the final executable, then:
-
-```shell
-go build ./cmd/webapi/
+**Build and Run**:
+```bash
+go run ./cmd/webapi/
 ```
+The backend listens on port **3000** by default. Data is stored in `./data/wasa.db` (the folder is created automatically).
 
-If you're using the WebUI and you want to embed it into the final executable:
+### Frontend
+**Prerequisites**: [Node.js 20+](https://nodejs.org/)
 
-```shell
-./open-node.sh
-# (here you're inside the container)
-yarn run build-embed
-exit
-# (outside the container)
-go build -tags webui ./cmd/webapi/
+**Build and Run**:
+```bash
+cd webui
+npm install
+npm run dev
 ```
-
-## How to run (Development Mode)
-
-### Local Run
-1.  **Backend**:
-    ```shell
-    go run ./cmd/webapi/
-    ```
-2.  **Frontend**:
-    ```shell
-    cd webui
-    npm install
-    npm run dev
-    ```
-    The app will be available at `http://localhost:5173`. Use `npm` for consistent dependency management.
-
-### Docker Compose (Recommended)
-This starts both the backend and frontend with a single command and persists data.
-```shell
-docker compose up --build
-```
--   **Frontend**: `http://localhost:5173`
--   **Backend**: `http://localhost:3000`
--   **Database**: Persisted in a Docker volume `wasa-data`.
-
-## Final QA Checklist
-Use this checklist to verify the system is fully functional:
-- [ ] **Auth**: Login as two different users.
-- [ ] **Messaging**: Alice sends DM to Bob; Bob receives it instantly.
-- [ ] **Comments**: Alice adds/removes a comment on Bob's message.
-- [ ] **Soft-delete**: Bob deletes his message; Alice sees it as "deleted".
-- [ ] **Conflict (409)**: Alice tries to comment on Bob's deleted message (expect error).
-- [ ] **Groups**: Create a group, rename it, add a member, and leave it.
-- [ ] **Photos**: Upload a profile photo and group photo; verify they display correctly.
-- [ ] **Persistence**: Restart containers (`docker compose restart`) and verify all data survives.
-
-## How to reset the database
-
-### Local
-Remove the local database file:
-```shell
-rm data/wasa.db
-```
+The frontend dev server starts on **http://localhost:5173**. Requests to `/api` are automatically proxied to the backend.
 
 ### Docker
-Remove the Docker volume:
-```shell
-docker compose down -v
+The project is best run using **Docker Compose**, which handles all networking and persistence setup.
+
+**Start the Stack**:
+```bash
+docker compose up --build
+```
+- **Web UI**: [http://localhost:5173](http://localhost:5173)
+- **API Server**: [http://localhost:3000](http://localhost:3000)
+- **Persistence**: Data is mapped to a named volume `wasa-data`.
+
+**Stop the Stack**:
+```bash
+docker compose down
 ```
 
-## Regression Testing
-A comprehensive automated test suite is available:
-```shell
+## Configuration
+WASAText can be configured via environment variables (inherited by Docker) or command-line flags.
+
+**Key Environment Variables**:
+- `CFG_DB_FILENAME`: Path to the SQLite database (default: `./data/wasa.db`).
+- `CFG_WEB_APIHOST`: Host and port for the API server (default: `0.0.0.0:3000`).
+- `CFG_DEBUG`: Enable verbose logging (default: `false`).
+
+**Database Reset**:
+- **Local**: `rm data/wasa.db`
+- **Docker**: `docker compose down -v`
+
+## Testing
+An automated regression suite is provided to verify the core messaging and group flows.
+
+**Run All Tests**:
+```bash
 chmod +x scripts/regression_test.sh
 ./scripts/regression_test.sh
 ```
-See [REGRESSION.md](REGRESSION.md) for detailed scenarios.
+The script validates authentication, message synchronization, soft-deletion conflict logic, group management, and photo uploads.
 
-## License
+## Troubleshooting
+- **Port Conflict**: If port 3000 or 5173 is in use, the application will fail to start. Ensure these ports are available.
+- **Script Permissions**: If you cannot run scripts, use `chmod +x scripts/*.sh` to grant execution rights.
+- **Docker Health**: If the backend is "unhealthy" in Docker, ensure it can reach its own `/liveness` endpoint.
+- **Proxy Issues**: In local dev, the frontend relies on the Vite proxy defined in `vite.config.js` to reach the backend.
+- **Stale Database**: If you encounter schema errors after an update, perform a **Database Reset** as described above.
 
-See [LICENSE](LICENSE).
-
+---
+*Developed for the WASA course assignment.*
