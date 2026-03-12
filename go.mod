@@ -1,5 +1,4 @@
-module git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated
-
+module https://github.com/aaitayev/wasa-homework.git
 go 1.24.0
 
 require (
