@@ -63,16 +63,22 @@ func (rt *_router) sendMessage(w http.ResponseWriter, r *http.Request, ps httpro
 		conversationID = uuidConf.String()
 		
 		participants := []string{senderName}
-		if body.IsGroup {
-			// Add all specified participants for a group
-			for _, p := range body.Participants {
-				trimmed := strings.TrimSpace(p)
-				if trimmed != "" && trimmed != senderName {
-					participants = append(participants, trimmed)
-				}
+		// Add unique participants from the list
+		seen := map[string]bool{senderName: true}
+		
+		addParticipant := func(p string) {
+			trimmed := strings.TrimSpace(p)
+			if trimmed != "" && !seen[trimmed] {
+				participants = append(participants, trimmed)
+				seen[trimmed] = true
 			}
-		} else if body.Recipient != "" && body.Recipient != senderName {
-			participants = append(participants, body.Recipient)
+		}
+
+		for _, p := range body.Participants {
+			addParticipant(p)
+		}
+		if body.Recipient != "" {
+			addParticipant(body.Recipient)
 		}
 		
 		conversation = &models.Conversation{

@@ -39,5 +39,9 @@ webui/.yarn/cache/
 webui/.yarn/unplugged/
 webui/.yarn/install-state.gz
 webui/.yarn/build-state.yml
-webui/package-lock.json
 webui/dist/
+
+# Debug and temp files
+backend.log
+get_conv_debug.json
+

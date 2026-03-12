@@ -84,7 +84,7 @@ go build -tags webui ./cmd/webapi/
     npm install
     npm run dev
     ```
-    The app will be available at `http://localhost:5173`.
+    The app will be available at `http://localhost:5173`. Use `npm` for consistent dependency management.
 
 ### Docker Compose (Recommended)
 This starts both the backend and frontend with a single command and persists data.
@@ -94,6 +94,17 @@ docker compose up --build
 -   **Frontend**: `http://localhost:5173`
 -   **Backend**: `http://localhost:3000`
 -   **Database**: Persisted in a Docker volume `wasa-data`.
+
+## Final QA Checklist
+Use this checklist to verify the system is fully functional:
+- [ ] **Auth**: Login as two different users.
+- [ ] **Messaging**: Alice sends DM to Bob; Bob receives it instantly.
+- [ ] **Comments**: Alice adds/removes a comment on Bob's message.
+- [ ] **Soft-delete**: Bob deletes his message; Alice sees it as "deleted".
+- [ ] **Conflict (409)**: Alice tries to comment on Bob's deleted message (expect error).
+- [ ] **Groups**: Create a group, rename it, add a member, and leave it.
+- [ ] **Photos**: Upload a profile photo and group photo; verify they display correctly.
+- [ ] **Persistence**: Restart containers (`docker compose restart`) and verify all data survives.
 
 ## How to reset the database
 
@@ -109,12 +120,15 @@ Remove the Docker volume:
 docker compose down -v
 ```
 
-## Manual Verification Plan
-1.  **Start and Connect**: Run `docker compose up --build` and open `http://localhost:5173`.
-2.  **Basic Flow**: Log in, search for a user, create a conversation, and send a message.
-3.  **Photos**: Set a profile photo in `UsersView` and a group photo in `GroupsView`.
-4.  **Persistence**:
-    -   Restart containers: `docker compose restart`.
-    -   Refresh page and verify all data (messages, photos, names) is still there.
-5.  **Hard Reset**: Run `docker compose down -v` and verify the app starts fresh.
+## Regression Testing
+A comprehensive automated test suite is available:
+```shell
+chmod +x scripts/regression_test.sh
+./scripts/regression_test.sh
+```
+See [REGRESSION.md](REGRESSION.md) for detailed scenarios.
+
+## License
+
+See [LICENSE](LICENSE).
 
