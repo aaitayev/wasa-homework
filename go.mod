@@ -1,4 +1,4 @@
-module github.com/aaitayev/wasa-homework.git
+module github.com/aaitayev/wasa-homework
 
 go 1.24.0
 
