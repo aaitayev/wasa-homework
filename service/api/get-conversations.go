@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework"
 	"github.com/julienschmidt/httprouter"
 )
 
