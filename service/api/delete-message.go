@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"https://github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework.git"
 	"github.com/julienschmidt/httprouter"
 )
 
