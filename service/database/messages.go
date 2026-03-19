@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework"
 	"time"
 )
 
