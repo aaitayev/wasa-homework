@@ -1,7 +1,7 @@
 package api
 
 import (
-	"https://github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework.git"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
