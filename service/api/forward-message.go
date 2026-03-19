@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aaitayev/wasa-homework.git"
-	"github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework"
+	"github.com/aaitayev/wasa-homework"
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 )
