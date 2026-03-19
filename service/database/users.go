@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"git.sapienzaapps.it/fantasticcoffee/fantastic-coffee-decaffeinated/service/models"
+	"github.com/aaitayev/wasa-homework.git"
 )
 
 func (db *appdbimpl) CreateUser(name string, token string) error {
