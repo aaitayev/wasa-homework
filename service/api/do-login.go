@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/gofrs/uuid"
 	"net/http"
-	"https://github.com/aaitayev/wasa-homework.git"
+	"github.com/aaitayev/wasa-homework.git"
 	"github.com/julienschmidt/httprouter"
 )
 
